@@ -3,6 +3,7 @@ import { createHash } from "node:crypto"
 import { mkdtemp, rm, stat, mkdir } from "node:fs/promises"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
+import { clients } from "../src/import"
 import { start } from "../src/server"
 
 const cleanup: (() => unknown)[] = []
@@ -105,7 +106,7 @@ test('PKCE sign-in, persisted login, full catalog, ZDR, usage, client imports an
   expect(view.windows.find((value: any) => value.name === 'Credits')).toMatchObject({ amount: 650 })
   expect(view.windows.find((value: any) => value.name === 'Credits').used).toBeUndefined()
   expect(view.windows.find((value: any) => value.name === 'Subscription').amount).toBe(400)
-  for (const app of ['claude', 'codex', 'opencode']) {
+  for (const app of ['claude', 'codex', 'opencode', 'grokbuild', 'openclaw', 'hermes', 'pi']) {
     const result = await f.post('import', { app, model: catalog[0].id, protocol: 'openai', ...(app === 'codex' ? { effort: 'low' } : {}) })
     expect(result.status).toBe(200)
     const link = new URL(result.data.url)
@@ -114,7 +115,24 @@ test('PKCE sign-in, persisted login, full catalog, ZDR, usage, client imports an
     if (app === 'codex') expect(Buffer.from(link.searchParams.get('config')!, 'base64').toString()).toContain('model_reasoning_effort = "low"')
   }
   expect((await f.post('import', { app: 'codex', model: catalog[0].id, protocol: 'anthropic' })).status).toBe(400)
-  expect((await f.post('import', { app: 'claude', model: 'gemini-id', protocol: 'gemini' })).status).toBe(400)
+  const state = (await f.post('state')).data
+  expect(state.clients.map((client: any) => client.id)).toEqual(['codex', 'claude', 'opencode', 'gemini', 'agy', 'grokbuild', 'openclaw', 'hermes', 'pi'])
+  for (const app of ['claude', 'codex', 'opencode', 'gemini', 'agy', 'grokbuild', 'openclaw', 'hermes', 'pi'] as const) {
+    for (const protocol of clients[app].protocols) {
+      const model = catalog.find((value: any) => value.protocols.includes(protocol))
+      const result = await f.post('import', { app, model: model.id, protocol })
+      expect(result.status).toBe(200)
+      const link = new URL(result.data.url)
+      expect(link.searchParams.get('app')).toBe(app)
+      expect(link.searchParams.get('model')).toBe(model.id)
+      const endpoint = link.searchParams.get('endpoint')!
+      if (protocol === 'gemini') expect(endpoint.endsWith('/v1beta')).toBe(['opencode', 'openclaw', 'pi'].includes(app))
+      if (protocol === 'anthropic') expect(endpoint.endsWith('/v1')).toBe(['opencode', 'openclaw'].includes(app))
+    }
+  }
+  for (const app of ['codex', 'grokbuild', 'hermes']) expect((await f.post('import', { app, model: 'gemini-id', protocol: 'gemini' })).status).toBe(400)
+  expect((await f.post('import', { app: 'gemini', model: catalog[0].id, protocol: 'openai' })).status).toBe(400)
+  expect((await f.post('import', { app: 'claude-desktop', model: catalog[0].id, protocol: 'openai' })).status).toBe(400)
   await f.app.stop()
   const restored = await start({ directory: f.directory, port: 0, sites: f.app.store.sites })
   cleanup.push(() => restored.stop())
@@ -224,4 +242,18 @@ test('site credentials stay isolated and stale account confirmations cannot rese
   await f.app.store.put('cn', { ...f.app.store.accounts.cn!, accountId: 'new@example.invalid', uid: 'another-subject' })
   expect((await f.post('reset/apply', { confirmation: review.data.confirmation })).status).toBe(400)
   expect(f.remote.applied).toBe(0)
+})
+
+
+test('a running server keeps its page assets paired with its API during an update', async () => {
+  const f = await setup()
+  const asset = new URL('../page/account.js', import.meta.url)
+  const original = await Bun.file(asset).text()
+  try {
+    await Bun.write(asset, original + '\n// Future page version used by the update flow test.\n')
+    const response = await fetch(`${f.origin}/account.js`)
+    expect(response.headers.get('cache-control')).toBe('no-store')
+    expect(await response.text()).toBe(original)
+    expect((await f.post('state')).data.clients).toHaveLength(9)
+  } finally { await Bun.write(asset, original) }
 })

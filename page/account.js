@@ -1,6 +1,6 @@
 const $ = id => document.getElementById(id)
 const session = document.querySelector('meta[name="dim-session"]').content
-let catalog = [], poll, generation = 0, reset
+let catalog = [], clients = [], poll, generation = 0, reset
 const site = () => $('site').value
 function message(text, error = false) { $('message').textContent = text; $('message').classList.toggle('error', error) }
 async function api(path, body = {}) {
@@ -14,6 +14,8 @@ function option(value, label) { const item = document.createElement('option'); i
 function invalidate() { $('import').hidden = true; $('import').removeAttribute('href') }
 async function state() {
   const data = await api('state')
+  clients = data.clients
+  if (!$('app').options.length) $('app').replaceChildren(...clients.map(item => option(item.id, item.label)))
   if (!$('site').options.length) $('site').replaceChildren(...data.sites.map(item => option(item.id, item.label)))
   const current = data.sites.find(item => item.id === site())
   $('identity').textContent = current.account ? `${current.account} (${new URL(current.issuer).host})` : '登录后查看套餐、选择模型'
@@ -67,9 +69,9 @@ function renderModels(models) {
 function selection() {
   invalidate()
   const model = catalog.find(item => item.id === $('model').value)
-  $('protocol').replaceChildren(...(model?.protocols || []).filter(value => value !== 'gemini' || $('app').value === 'opencode').map(value => option(value, { openai: 'OpenAI Chat Completions', 'openai-response': 'OpenAI Responses', anthropic: 'Anthropic Messages', gemini: 'Gemini' }[value])))
+  $('protocol').replaceChildren(...(model?.protocols || []).filter(value => clients.find(client => client.id === $('app').value)?.protocols.includes(value)).map(value => option(value, { openai: 'OpenAI Chat Completions', 'openai-response': 'OpenAI Responses', anthropic: 'Anthropic Messages', gemini: 'Gemini' }[value])))
   efforts()
-  $('capability').textContent = model ? `请求模型：${model.id}${model.zdr ? ' · 零留存 ZDR' : ''}${model.efforts.length ? ` · 支持推理强度：${model.efforts.join('、')}` : ''}` : '当前没有可用模型，请刷新目录。'
+  $('capability').textContent = model && !$('protocol').value ? '此模型没有该客户端支持的接口，请更换模型或客户端。' : model ? `请求模型：${model.id}${model.zdr ? ' · 零留存 ZDR' : ''}${model.efforts.length ? ` · 支持推理强度：${model.efforts.join('、')}` : ''}` : '当前没有可用模型，请刷新目录。'
 }
 function efforts() {
   invalidate()

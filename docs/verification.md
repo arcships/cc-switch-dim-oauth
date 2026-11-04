@@ -68,3 +68,14 @@ DIM_IMPORT_FIXTURES=/absolute/path/cc-switch-dim-oauth/.state/host-imports.json 
 - [Codex 导入卡片](verification/desktop-codex-import.png)
 - [安装版原生模型拉取](verification/desktop-fetch-models.png)
 - [OpenCode 已添加](verification/desktop-opencode-added.png)
+
+
+## 客户端列表扩展与更新期间页面一致性
+
+2026-11-04，将三个客户端入口扩展至官方深链接支持的九个客户端，单一客户端定义由服务端随 `/api/state` 返回，页面据此显示并筛选兼容协议。API 流程覆盖九个客户端、27 个可用客户端/协议组合，以及不支持的客户端与协议拒绝。CC Switch 实际 `parse_deeplink_url` / `import_provider_from_deeplink` 对全部 27 组链接验证通过；包括 Gemini 环境配置、Antigravity 的 `config.model.name`、Grok Build 路由格式、Hermes 的 `api_mode` 与 OpenClaw / Pi 的 `api` 字段。
+
+宿主测试先暴露了测试夹具的两个问题：Antigravity 使用独立的模型字段路径；快速批量导入相同名称会碰到宿主毫秒时间戳 ID 冲突。夹具改为按客户端/协议命名，并按各自公开配置检查。没有通过放宽生产约束掩盖不兼容。
+
+用户在开发过程中遇到 `Cannot read properties of undefined (reading 'map')`：旧后台仍运行，但从磁盘读到了新版页面脚本，新脚本依赖旧 API 没有的 clients。先恢复与旧进程匹配的页面，再保留凭据重启为完整新版本。启动时固定页面资源，并设置脚本、样式和图标 `Cache-Control: no-store`，避免后续运行期间混入不同版本的磁盘文件。流程回归验证修改磁盘页面后，已运行实例仍返回与其 API 匹配的资源。
+
+8 个流程测试和类型检查通过。浏览器只读实测确认用户现有登录被保留、真实模型及用量可读、九个客户端可见；选中不兼容客户端时禁用导入并给出明确提示。未调用付费模型或执行真实重置。新增客户端的模型生成链路尚未逐个实测，不将导入成功等同于端到端完成。

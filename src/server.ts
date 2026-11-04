@@ -5,10 +5,14 @@ import { models, type Model, type Protocol, parseProtocol } from "./catalog"
 import { Store, sites, type Site } from "./store"
 import { endpoint, identityHeaders, json, record, request, text } from "./http"
 import { applyReset, fetchAccount, prepareReset, type ResetConfirmation } from "./account"
-import { importLink } from "./import"
+import { importLink, clients, parseApp } from "./import"
 
 export interface ServerOptions { directory: string; port?: number; callback?: string; sites?: Record<string, Site> }
 export async function start(options: ServerOptions) {
+  // Keep the served page and its API on the same running version during updates.
+  const html = await Bun.file(new URL("../page/index.html", import.meta.url)).text()
+  const assets = new Map<string, ArrayBuffer>(await Promise.all(["account.js", "account.css", "icon.png"].map(async name =>
+    [`/${name}`, await Bun.file(new URL(`../page/${name}`, import.meta.url)).arrayBuffer()] as const)))
   const store = new Store(options.directory, options.sites ?? sites)
   const session = randomBytes(32).toString("base64url")
   const confirmations = new Map<string, { site: string; value: ResetConfirmation; result?: Promise<unknown> }>()
@@ -30,18 +34,18 @@ export async function start(options: ServerOptions) {
       try {
         if (url.pathname.startsWith("/relay/")) return await relay(req, url)
         if (req.method === "GET" && url.pathname === "/") {
-          const html = await Bun.file(new URL("../page/index.html", import.meta.url)).text()
           return new Response(html.replace("__SESSION__", session), { headers: {
             "Content-Type": "text/html; charset=utf-8", "Cache-Control": "no-store", "Referrer-Policy": "no-referrer",
             "X-Frame-Options": "DENY", "Content-Security-Policy": "default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self'; connect-src 'self'; base-uri 'none'; frame-ancestors 'none'; form-action 'none'",
           } })
         }
         if (req.method === "GET" && ["/account.js", "/account.css", "/icon.png"].includes(url.pathname)) {
-          return new Response(Bun.file(new URL(`../page${url.pathname}`, import.meta.url)), { headers: { "Content-Type": url.pathname.endsWith(".js") ? "text/javascript; charset=utf-8" : url.pathname.endsWith(".png") ? "image/png" : "text/css; charset=utf-8" } })
+          return new Response(assets.get(url.pathname), { headers: { "Cache-Control": "no-store", "Content-Type": url.pathname.endsWith(".js") ? "text/javascript; charset=utf-8" : url.pathname.endsWith(".png") ? "image/png" : "text/css; charset=utf-8" } })
         }
         if (req.method !== "POST" || req.headers.get("x-dim-session") !== session || !req.headers.get("content-type")?.startsWith("application/json")) return reply({ error: "Unauthorized account request" }, 403)
         const body = record(await req.json(), "account request")
         if (url.pathname === "/api/state") return reply({
+          clients: Object.entries(clients).map(([id, client]) => ({ id, ...client })),
           sites: Object.entries(store.sites).map(([id, site]) => ({ id, label: site.label, issuer: site.issuer, account: store.accounts[id]?.accountId })),
           login: login ? { site: login.site, status: login.status } : undefined,
         })
@@ -79,8 +83,7 @@ export async function start(options: ServerOptions) {
         if (url.pathname === "/api/import") {
           const model = (await catalog(auth)).find(model => model.id === body.model)
           if (!model) throw new Error("Model no longer available; refresh the catalog")
-          const app = text(body.app, "client")
-          if (app !== "claude" && app !== "codex" && app !== "opencode") throw new Error("Unsupported client")
+          const app = parseApp(body.app)
           const protocol = parseProtocol(body.protocol)
           if (!model.protocols.includes(protocol)) throw new Error("Unsupported model protocol")
           const effort = body.effort === undefined || body.effort === "" ? undefined : text(body.effort, "effort")

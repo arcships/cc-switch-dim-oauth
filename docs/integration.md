@@ -39,7 +39,9 @@ DimAgent 账户页
 
 CC Switch 只接收稳定的本地随机 Key，真实 access/refresh token 不进入链接、网页、CC Switch 配置或日志。退出删除该站点的本地凭据，不隐式撤销服务端授权；后台程序退出时转发停止。账户页校验 Host、Origin 与随机会话头，禁止嵌入，不开放跨域。转发校验本地 Key、站点、固定路径、目录中的模型及其协议；不代理任意 URL，不转发调用方的 Cookie、Key 和任意头。
 
-复用 Magpie 项目中已经核对的 Dim OAuth、用量与重置业务协议，移除 Magpie hooks 和宿主账户依赖。转发本身不做协议转换；Claude Code / Codex 的非原生格式使用 CC Switch 现有本地路由。支持 Claude Code、Codex、OpenCode 导入；Gemini 原生仅提供 OpenCode 导入。模型请求流直接透传状态、响应流、Retry-After 和取消；不重试任何付费请求，包括 401。
+复用 Magpie 项目中已经核对的 Dim OAuth、用量与重置业务协议，移除 Magpie hooks 和宿主账户依赖。转发本身不做协议转换；Claude Code / Codex 的非原生格式使用 CC Switch 现有本地路由。客户端入口扩展到官方深链接支持的 9 类：Claude Code、Codex、OpenCode、Gemini CLI、Antigravity CLI、Grok Build、OpenClaw、Hermes、Pi。客户端与协议约束使用一份服务端定义，页面从状态接口读取；仅显示当前模型与客户端共同支持的协议，无兼容协议时禁止生成并说明原因。Gemini CLI / Antigravity CLI 仅支持 Gemini；Codex / Grok Build / Hermes 支持三种非 Gemini 协议；其余支持四种协议。推理强度仍仅对已经验证的 Codex OpenAI 类接口导入。CC Switch 侧栏更多入口不等于其深链接都可用，Claude Desktop、MiniMax Code、Kimi Code、DeepSeek Harness、Oh My Pi 暂不进入本项目导入列表。
+
+Anthropic 的 OpenCode / OpenClaw SDK 地址带 `/v1`，其他客户端使用协议根地址。Gemini CLI / Antigravity CLI 及 Claude 的 Gemini 路由使用根地址，由客户端附加版本；OpenCode / OpenClaw / Pi 使用带 `/v1beta` 的 SDK 地址。地址约定来自 CC Switch 的服务商配置与客户端 SDK；不在转发端补偿重复版本路径。模型请求流直接透传状态、响应流、Retry-After 和取消；不重试任何付费请求，包括 401。
 
 动态目录每次从 `/v1/models?type=dim` 读取，按服务端协议分组；未声明 endpoint 时默认 OpenAI-compatible，显式未知协议不改写为默认。模型 ID 原样传递；ZDR 仅检查条目顶层 `zdr === true`。账户页展示目录的 effort；Codex 的 OpenAI 类接口可以把选中的 effort 写入导入配置，其他客户端由其自身设置，不伪造通用 effort 接口。Codex 始终附带最小服务商 TOML，避免上游无 config 时自动写入 `high`，把未指定的推理强度误写成服务端不支持的值。
 
@@ -52,6 +54,10 @@ CC Switch 只接收稳定的本地随机 Key，真实 access/refresh token 不�
 若希望在授权中心直接显示 DimAgent，而不运行独立进程，需要上游增加：DimAgent OAuth 凭据类型与存储、PKCE loopback 登录、串行刷新、请求凭据注入、账号绑定、模型能力投影、原生用量查询及账户入口。单独添加静态品牌预设无法实现这些行为。账户页可继续复用官方控制台，额度重置需要额外的确认与幂等动作入口；不应通过余额查询脚本发起写操作。
 
 项目通过公开 GitHub 仓库 `arcships/cc-switch-dim-oauth` 分发；用户已授权创建公开仓库并推送。保持不发布 npm、不提交上游 PR、不修改用户现有 CC Switch / Magpie 配置。
+
+## 运行中的资源版本
+
+页面资源在进程启动时读取并固定，与该进程的 API 契约一起使用；更新源码后必须重启，再刷新页面。不在页面消费方用空列表补齐缺失的内部 clients 字段，以免把版本不一致伪装成没有可用客户端。脚本、样式、图标禁止缓存。
 
 ## 消融检查
 

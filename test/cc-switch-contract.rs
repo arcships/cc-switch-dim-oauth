@@ -35,14 +35,39 @@ fn dimagent_generated_links_import_with_actual_host_code() {
             let config = settings["config"].as_str().unwrap();
             assert!(!config.contains("model_reasoning_effort"));
         }
-        if app == "claude" || app == "codex" {
+        if app == "claude" || app == "codex" || app == "grokbuild" {
             let expected = match protocol {
                 "openai" => "openai_chat",
                 "openai-response" => "openai_responses",
                 "anthropic" => "anthropic",
+                "gemini" => "gemini_native",
                 _ => unreachable!(),
             };
             assert_eq!(row.meta.as_ref().unwrap().api_format.as_deref(), Some(expected));
+        }
+        if app == "gemini" || app == "agy" {
+            let model = if app == "agy" { &settings["config"]["model"]["name"] } else { &settings["env"]["GEMINI_MODEL"] };
+            assert_eq!(model, "vendor/full-model-id");
+            assert!(settings["env"]["GOOGLE_GEMINI_BASE_URL"].as_str().unwrap().ends_with("/gemini"));
+        }
+        if app == "hermes" {
+            let expected = match protocol {
+                "openai" => "chat_completions",
+                "openai-response" => "codex_responses",
+                "anthropic" => "anthropic_messages",
+                _ => unreachable!(),
+            };
+            assert_eq!(settings["api_mode"], expected);
+        }
+        if app == "openclaw" || app == "pi" {
+            let expected = match protocol {
+                "openai" => "openai-completions",
+                "openai-response" => "openai-responses",
+                "anthropic" => "anthropic-messages",
+                "gemini" => "google-generative-ai",
+                _ => unreachable!(),
+            };
+            assert_eq!(settings["api"], expected);
         }
         if app == "opencode" {
             let expected = match protocol {

@@ -2,7 +2,7 @@
 
 <img src="page/icon.png" width="72" alt="DimAgent">
 
-通过 CC Switch 的供应商导入功能，在 Claude Code、Codex 或 OpenCode 中使用 DimAgent。支持账号登录、模型选择，以及套餐和用量管理。
+通过 CC Switch 的供应商导入功能，在 CC Switch 支持的客户端中使用 DimAgent。支持账号登录、模型选择，以及套餐和用量管理。
 
 本指南按 CC Switch 官方的 [添加供应商](https://github.com/farion1231/cc-switch/blob/main/docs/user-manual/zh/2-providers/2.1-add.md)、[切换供应商](https://github.com/farion1231/cc-switch/blob/main/docs/user-manual/zh/2-providers/2.2-switch.md) 和 [深链接导入指南](https://github.com/farion1231/cc-switch/blob/main/docs/guides/deeplink-site-integration-guide-zh.md) 整理。**本项目采用 OAuth 登录，需要在本机运行配套程序；使用期间请保持程序运行。**
 
@@ -40,7 +40,7 @@ bun start
 
 | CC Switch 字段 | DimAgent 对应内容 |
 | --- | --- |
-| 应用类型 | 所选的 Claude Code、Codex 或 OpenCode；每次导入对应一个客户端 |
+| 应用类型 | 所选客户端；当前提供 9 个导入入口，每次导入对应一个客户端 |
 | 供应商名称 | `DimAgent · 模型显示名` |
 | API 端点 | `http://127.0.0.1:3489/relay/...`，由本程序按站点、接口和客户端生成，保留完整路径 |
 | API Key | 自动生成的本地连接 Key；无需手动填写 DimAgent 密码或 OAuth 令牌 |
@@ -58,12 +58,14 @@ CC Switch 会对本机端点显示提示。确认它是自己启动的 `127.0.0.
 
 | 账户页接口 | CC Switch 格式 | 本项目提供的客户端入口 |
 | --- | --- | --- |
-| OpenAI Chat Completions | `openai_chat` | Claude Code、Codex、OpenCode |
-| OpenAI Responses | `openai_responses` | Claude Code、Codex、OpenCode |
-| Anthropic Messages | `anthropic` | Claude Code、Codex、OpenCode |
-| Gemini | `gemini_native` | OpenCode |
+| OpenAI Chat Completions | `openai_chat` | Claude Code、Codex、OpenCode、Grok Build、OpenClaw、Hermes、Pi |
+| OpenAI Responses | `openai_responses` | Claude Code、Codex、OpenCode、Grok Build、OpenClaw、Hermes、Pi |
+| Anthropic Messages | `anthropic` | Claude Code、Codex、OpenCode、Grok Build、OpenClaw、Hermes、Pi |
+| Gemini | `gemini_native` | Claude Code、OpenCode、Gemini CLI、Antigravity CLI、OpenClaw、Pi |
 
-**Claude Code 的原生格式是 Messages，Codex 的原生格式是 Responses。** 所选接口与客户端原生格式不一致时，CC Switch 会显示「需要路由 / Needs routing」，需要启用其本地路由来转换格式。OpenCode 按导入的接口格式连接。
+客户端列表按 CC Switch 的深链接支持范围提供。Claude Desktop、MiniMax Code、Kimi Code、DeepSeek Harness、Oh My Pi 暂不支持通过此页面导入。所选模型没有客户端支持的协议时，页面会提示换模型或客户端。
+
+**Claude Code 的原生格式是 Messages，Codex 和 Grok Build 的原生格式是 Responses。** 所选接口与客户端原生格式不一致时，CC Switch 会显示「需要路由 / Needs routing」，需要启用其本地路由来转换格式。OpenCode 按导入的接口格式连接。
 
 不要仅凭模型名称猜测接口，也不要手动把生成地址的 `/v1` 或其他路径删掉。地址和格式需要配套使用。
 
@@ -73,8 +75,11 @@ CC Switch 会对本机端点显示提示。确认它是自己启动的 `127.0.0.
 
 | 客户端 | 在 CC Switch 中的操作 | 完成后在哪里选模型 |
 | --- | --- | --- |
-| Claude Code、Codex | 在对应应用的供应商列表中找到 DimAgent，点击「切换 / Switch」。如提示需要路由，按提示启用「路由 / Routing」 | 重新打开客户端，按其模型选择入口选择或确认模型 |
-| OpenCode | 在导入确认框开启「导入后添加到 OpenCode 配置」，或在供应商列表中添加到配置；确认出现在「已添加 / Added」列表 | 在 OpenCode 内选择该供应商的模型 |
+| Claude Code、Codex、Grok Build | 在对应应用的供应商列表中找到 DimAgent，点击「切换 / Switch」。如提示需要路由，按提示启用「路由 / Routing」 | 重新打开客户端，按其模型选择入口选择或确认模型 |
+| OpenCode、OpenClaw、Pi | 在导入确认框开启「导入后添加到应用配置」，或导入后在对应列表添加 / 启用 | 在对应客户端内选择模型 |
+| Hermes | 先添加到应用配置，再按 Hermes 供应商页的「启用」操作选择供应商 | 在 Hermes 内使用所选模型 |
+| Gemini CLI | 导入后在对应供应商页切换，仅支持 Gemini 原生接口 | 重新打开 Gemini CLI |
+| Antigravity CLI | 导入到对应供应商页，后续配置按该页面提供的操作进行；不套用其他应用的切换流程 | 在 Antigravity CLI 内使用所选模型 |
 
 使用 CC Switch 路由时，同时保持 CC Switch 与本项目的本地程序运行。OpenCode 可以同时添加多个供应商，不需要把它当作单选供应商来切换。
 
@@ -85,6 +90,10 @@ CC Switch 会对本机端点显示提示。确认它是自己启动的 `127.0.0.
 账户页的「刷新模型」读取最新目录，**不会自动覆盖 CC Switch 中的卡片**。需要更新时，可重新导入，或在 CC Switch 编辑供应商时使用「拉取模型 / Fetch Models」；旧卡片按需手动删除。推理强度与 ZDR 以最新目录为准，卡片备注只记录导入时的 ZDR 状态。
 
 在终端按 `Ctrl+C` 停止本程序后，该 DimAgent 供应商会暂时无法连接；重新运行后可继续使用。本项目暂未提供开机自动启动。关闭 CC Switch 也不会替你启动本程序。
+
+### 怎么更新本程序？
+
+在原终端按 `Ctrl+C` 停止程序，在项目目录执行 `git pull` 和 `bun install --frozen-lockfile`，再运行 `bun start`，最后刷新浏览器账户页。登录信息保留；页面与后台需要一起更新，运行期间修改页面文件不会立即切换已启动实例的版本。
 
 ### 用量、购买和额度重置在哪里？
 
@@ -124,4 +133,4 @@ CC Switch 会对本机端点显示提示。确认它是自己启动的 `127.0.0.
 
 已在 macOS 安装版 CC Switch 4.0.25 中，以隔离配置和模拟 DimAgent 账号验证 Codex 导入、完整模型 ID 与推理强度保留、模型拉取，以及 OpenCode 配置写入。模拟流程还覆盖登录、续期、流式转发和幂等重置。
 
-两站授权参数已通过匿名预检；真实账号登录、续期与付费模型生成尚未完成端到端实测。详细证据与开发检查方式见 [验证记录](docs/verification.md)。
+两站授权参数已通过匿名预检；真实账号登录、续期与付费模型生成尚未完成端到端实测。新增客户端已通过 CC Switch 原生导入代码验证，尚未逐个完成真实客户端模型生成实测。详细证据与开发检查方式见 [验证记录](docs/verification.md)。
