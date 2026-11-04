@@ -11,7 +11,7 @@ export interface ServerOptions { directory: string; port?: number; callback?: st
 export async function start(options: ServerOptions) {
   // Keep the served page and its API on the same running version during updates.
   const html = await Bun.file(new URL("../page/index.html", import.meta.url)).text()
-  const assets = new Map<string, ArrayBuffer>(await Promise.all(["account.js", "account.css", "icon.png"].map(async name =>
+  const assets = new Map<string, ArrayBuffer>(await Promise.all(["dropdown.js", "account.js", "account.css", "icon.png"].map(async name =>
     [`/${name}`, await Bun.file(new URL(`../page/${name}`, import.meta.url)).arrayBuffer()] as const)))
   const store = new Store(options.directory, options.sites ?? sites)
   const session = randomBytes(32).toString("base64url")
@@ -39,7 +39,7 @@ export async function start(options: ServerOptions) {
             "X-Frame-Options": "DENY", "Content-Security-Policy": "default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self'; connect-src 'self'; base-uri 'none'; frame-ancestors 'none'; form-action 'none'",
           } })
         }
-        if (req.method === "GET" && ["/account.js", "/account.css", "/icon.png"].includes(url.pathname)) {
+        if (req.method === "GET" && assets.has(url.pathname)) {
           return new Response(assets.get(url.pathname), { headers: { "Cache-Control": "no-store", "Content-Type": url.pathname.endsWith(".js") ? "text/javascript; charset=utf-8" : url.pathname.endsWith(".png") ? "image/png" : "text/css; charset=utf-8" } })
         }
         if (req.method !== "POST" || req.headers.get("x-dim-session") !== session || !req.headers.get("content-type")?.startsWith("application/json")) return reply({ error: "Unauthorized account request" }, 403)

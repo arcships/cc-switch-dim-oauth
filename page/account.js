@@ -1,7 +1,8 @@
 const $ = id => document.getElementById(id)
+const controls = Object.fromEntries(['site', 'model', 'app', 'protocol', 'effort'].map(id => [id, new Dropdown($(id))]))
 const session = document.querySelector('meta[name="dim-session"]').content
 let catalog = [], clients = [], poll, generation = 0, reset
-const site = () => $('site').value
+const site = () => controls.site.value
 function message(text, error = false) { $('message').textContent = text; $('message').classList.toggle('error', error) }
 async function api(path, body = {}) {
   const response = await fetch(`/api/${path}`, { method: 'POST', headers: { 'Content-Type': 'application/json', 'x-dim-session': session }, body: JSON.stringify(body) })
@@ -10,13 +11,13 @@ async function api(path, body = {}) {
   return data
 }
 function run(action) { return async event => { const button = event?.currentTarget; if (button?.tagName === 'BUTTON') button.disabled = true; try { await action() } catch (error) { message(error.message, true) } finally { if (button?.tagName === 'BUTTON') button.disabled = false } } }
-function option(value, label) { const item = document.createElement('option'); item.value = value; item.textContent = label; return item }
+function option(value, label) { return { value, label } }
 function invalidate() { $('import').hidden = true; $('import').removeAttribute('href') }
 async function state() {
   const data = await api('state')
   clients = data.clients
-  if (!$('app').options.length) $('app').replaceChildren(...clients.map(item => option(item.id, item.label)))
-  if (!$('site').options.length) $('site').replaceChildren(...data.sites.map(item => option(item.id, item.label)))
+  if (!controls.app.options.length) controls.app.setOptions(clients.map(item => option(item.id, item.label)))
+  if (!controls.site.options.length) controls.site.setOptions(data.sites.map(item => option(item.id, item.label)))
   const current = data.sites.find(item => item.id === site())
   $('identity').textContent = current.account ? `${current.account} (${new URL(current.issuer).host})` : '登录后查看套餐、选择模型'
   $('logout').hidden = !current.account
@@ -60,29 +61,29 @@ function renderView(view) {
   document.querySelectorAll('[data-reset]').forEach(button => { const count = view.resets[button.dataset.reset].available; button.textContent = `${button.dataset.reset === 'window' ? '重置限流窗口' : '重置月度额度'}（剩余 ${count} 次）`; button.disabled = count === 0 })
 }
 function renderModels(models) {
-  const previous = $('model').value; catalog = models
-  $('model').replaceChildren(...models.map(model => option(model.id, model.name + (model.zdr ? ' · ZDR' : ''))))
-  if (models.some(model => model.id === previous)) $('model').value = previous
+  const previous = controls.model.value; catalog = models
+  controls.model.setOptions(models.map(model => option(model.id, model.name + (model.zdr ? ' · ZDR' : ''))))
+  if (models.some(model => model.id === previous)) controls.model.value = previous
   $('generate').disabled = !models.length
   selection()
 }
 function selection() {
   invalidate()
-  const model = catalog.find(item => item.id === $('model').value)
-  $('protocol').replaceChildren(...(model?.protocols || []).filter(value => clients.find(client => client.id === $('app').value)?.protocols.includes(value)).map(value => option(value, { openai: 'OpenAI Chat Completions', 'openai-response': 'OpenAI Responses', anthropic: 'Anthropic Messages', gemini: 'Gemini' }[value])))
+  const model = catalog.find(item => item.id === controls.model.value)
+  controls.protocol.setOptions((model?.protocols || []).filter(value => clients.find(client => client.id === controls.app.value)?.protocols.includes(value)).map(value => option(value, { openai: 'OpenAI Chat Completions', 'openai-response': 'OpenAI Responses', anthropic: 'Anthropic Messages', gemini: 'Gemini' }[value])))
   efforts()
-  $('capability').textContent = model && !$('protocol').value ? '此模型没有该客户端支持的接口，请更换模型或客户端。' : model ? `请求模型：${model.id}${model.zdr ? ' · 零留存 ZDR' : ''}${model.efforts.length ? ` · 支持推理强度：${model.efforts.join('、')}` : ''}` : '当前没有可用模型，请刷新目录。'
+  $('capability').textContent = model && !controls.protocol.value ? '此模型没有该客户端支持的接口，请更换模型或客户端。' : model ? `请求模型：${model.id}${model.zdr ? ' · 零留存 ZDR' : ''}${model.efforts.length ? ` · 支持推理强度：${model.efforts.join('、')}` : ''}` : '当前没有可用模型，请刷新目录。'
 }
 function efforts() {
   invalidate()
-  const model = catalog.find(item => item.id === $('model').value)
-  const supported = $('app').value === 'codex' && ['openai', 'openai-response'].includes($('protocol').value)
-  $('effort').replaceChildren(option('', '使用客户端默认值'), ...(supported ? model?.efforts || [] : []).map(value => option(value, value)))
-  $('effort').disabled = !supported
-  $('generate').disabled = !$('protocol').value
+  const model = catalog.find(item => item.id === controls.model.value)
+  const supported = controls.app.value === 'codex' && ['openai', 'openai-response'].includes(controls.protocol.value)
+  controls.effort.setOptions([option('', '使用客户端默认值'), ...(supported ? model?.efforts || [] : []).map(value => option(value, value))])
+  controls.effort.disabled = !supported
+  $('generate').disabled = !controls.protocol.value
 }
-$('site').onchange = run(load)
-$('model').onchange = selection; $('app').onchange = selection; $('protocol').onchange = efforts; $('effort').onchange = invalidate
+controls.site.onchange = run(load)
+controls.model.onchange = selection; controls.app.onchange = selection; controls.protocol.onchange = efforts; controls.effort.onchange = invalidate
 $('login').onclick = run(async () => {
   const result = await api('login', { site: site() })
   $('authorize').href = result.url; $('authorize').hidden = false
@@ -95,9 +96,9 @@ $('logout').onclick = run(async () => { await api('logout', { site: site() }); m
 $('refresh').onclick = run(load)
 $('reload-models').onclick = run(async () => { const selected = site(); const result = await api('models', { site: selected }); if (selected === site()) renderModels(result.models) })
 $('generate').onclick = run(async () => {
-  const selected = site(), model = $('model').value, app = $('app').value, protocol = $('protocol').value, effort = $('effort').value
+  const selected = site(), model = controls.model.value, app = controls.app.value, protocol = controls.protocol.value, effort = controls.effort.value
   const result = await api('import', { site: selected, model, app, protocol, effort })
-  if (selected !== site() || model !== $('model').value || app !== $('app').value || protocol !== $('protocol').value || effort !== $('effort').value) return
+  if (selected !== site() || model !== controls.model.value || app !== controls.app.value || protocol !== controls.protocol.value || effort !== controls.effort.value) return
   $('import').href = result.url; $('import').hidden = false
   message('点击“打开 CC Switch 导入”，在确认框中核对地址与模型。')
 })

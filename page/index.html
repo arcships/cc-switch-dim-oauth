@@ -1,14 +1,14 @@
 <!doctype html>
-<html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="dim-session" content="__SESSION__"><title>DimAgent</title><link rel="stylesheet" href="/account.css"><script src="/account.js" defer></script></head>
+<html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="dim-session" content="__SESSION__"><title>DimAgent</title><link rel="stylesheet" href="/account.css"><script src="/dropdown.js" defer></script><script src="/account.js" defer></script></head>
 <body><main>
 <header><img src="/icon.png" width="52" height="52" alt=""><div><h1>DimAgent</h1><p>在 CC Switch 使用你的 DimAgent 账号</p></div></header>
-<section class="connection"><label>站点 <select id="site"></select></label><span id="identity">正在读取账号…</span><button id="login" class="primary">登录</button><button id="logout" hidden>退出登录</button><button id="cancel" hidden>取消登录</button><a id="authorize" hidden target="_blank" rel="noopener noreferrer">前往授权页面</a></section>
+<section class="connection"><div class="site-field"><span id="site-label">站点</span><div id="site"></div></div><span id="identity">正在读取账号…</span><button id="login" class="primary">登录</button><button id="logout" hidden>退出登录</button><button id="cancel" hidden>取消登录</button><a id="authorize" hidden target="_blank" rel="noopener noreferrer">前往授权页面</a></section>
 <p id="message" role="status" aria-live="polite"></p>
 <div id="account" hidden>
 <section><div class="section-head"><div><h2 id="plan">套餐与用量</h2><p id="term"></p></div><div class="actions"><a id="subscription" target="_blank" rel="noopener noreferrer">购买 / 续期</a><a id="pricing" target="_blank" rel="noopener noreferrer">查看价格</a><button id="refresh">刷新</button></div></div>
 <p id="remaining"></p><div id="windows" class="windows"></div><div class="actions resets"><button data-reset="window">重置限流窗口</button><button data-reset="monthly_full">重置月度额度</button></div></section>
 <section><div class="section-head"><div><h2>选择模型，导入 CC Switch</h2><p>保留完整模型名称；目录与零留存标记以当前账号为准。</p></div><button id="reload-models">刷新模型</button></div>
-<div class="model-form"><label>模型 <select id="model"></select></label><label>客户端 <select id="app"></select></label><label>接口 <select id="protocol"></select></label><label>推理强度 <select id="effort"></select></label></div>
+<div class="model-form"><div class="field"><span id="model-label">模型</span><div id="model" data-search></div></div><div class="field"><span id="app-label">客户端</span><div id="app"></div></div><div class="field"><span id="protocol-label">接口</span><div id="protocol"></div></div><div class="field"><span id="effort-label">推理强度</span><div id="effort"></div></div></div>
 <p id="capability"></p><p class="hint">客户端按 CC Switch 的供应商导入协议提供；Claude Desktop、MiniMax Code、Kimi Code、DeepSeek Harness、Oh My Pi 暂不支持通过此页面导入。</p><button id="generate" class="primary">生成导入链接</button> <a id="import" hidden>打开 CC Switch 导入</a>
 <p class="hint">在 CC Switch 确认导入后再切换供应商。使用时保持本地接入程序运行；非原生接口按 CC Switch 提示开启本地路由。</p>
 </section></div>

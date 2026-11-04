@@ -79,3 +79,14 @@ DIM_IMPORT_FIXTURES=/absolute/path/cc-switch-dim-oauth/.state/host-imports.json 
 用户在开发过程中遇到 `Cannot read properties of undefined (reading 'map')`：旧后台仍运行，但从磁盘读到了新版页面脚本，新脚本依赖旧 API 没有的 clients。先恢复与旧进程匹配的页面，再保留凭据重启为完整新版本。启动时固定页面资源，并设置脚本、样式和图标 `Cache-Control: no-store`，避免后续运行期间混入不同版本的磁盘文件。流程回归验证修改磁盘页面后，已运行实例仍返回与其 API 匹配的资源。
 
 8 个流程测试和类型检查通过。浏览器只读实测确认用户现有登录被保留、真实模型及用量可读、九个客户端可见；选中不兼容客户端时禁用导入并给出明确提示。未调用付费模型或执行真实重置。新增客户端的模型生成链路尚未逐个实测，不将导入成功等同于端到端完成。
+
+
+## 页面内自定义下拉
+
+2026-11-04，参考 Nuxt UI v4 的 [Select](https://ui.nuxt.com/docs/components/select) 与 [SelectMenu](https://ui.nuxt.com/docs/components/select-menu)，将站点、模型、客户端、协议和推理强度改为页面内控件。实际实现保留原生 JavaScript，没有安装或声称直接使用 Nuxt UI Vue 组件。
+
+使用隔离模拟账号在浏览器完成：鼠标选择 OpenCode 后推理强度禁用；End 后 Escape 取消保持原值；模型搜索无结果与筛选后 Enter 选择；Home 选择 Codex、模型搜索回选、Space / ArrowDown / Enter 选择 low，生成的链接保留 `vendor/full-model-id` 和 `model_reasoning_effort = "low"`；Tab 离开与点击外部关闭。390px 视口页面宽度为 390px，无横向溢出，下拉列表可滚动。菜单按可用空间计算方向与高度；本次截图覆盖向下展开，未单独证明向上展开分支。
+
+现有 8 个流程测试、TypeScript 检查和浏览器脚本语法检查通过。未调用真实付费模型或执行额度重置。消融检查删除了旧 select 箭头伪元素与失去使用位置的 label 样式；共享控件仅承担实际需要的弹层、选择、搜索与键盘状态，不引入框架、构建依赖或额外业务状态。
+
+截图为模拟账号：[普通视口](verification/custom-dropdown-mock.png)、[窄屏](verification/custom-dropdown-narrow-mock.png)。
