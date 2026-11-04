@@ -48,3 +48,23 @@ DIM_IMPORT_FIXTURES=/absolute/path/cc-switch-dim-oauth/.state/host-imports.json 
 生成的 fixtures 全是模拟 Key；`enabled=false`。验证三种客户端、十种客户端/协议组合、完整模型 ID、本机前缀地址、OpenCode SDK 包选择、Codex 指定 effort 和不擅自强制 high 的默认配置。
 
 结果：通过。`dimagent_generated_links_import_with_actual_host_code` 使用 10 组本地生成链接，实际导入到 CC Switch 的内存数据库，全部断言通过。额外复用上游 `deeplink_import` 的 4 个现有流程，全部通过。两套测试均使用隔离 HOME，未打开用户安装的 CC Switch 或修改其数据库。
+
+## 本机安装版界面验证
+
+2026-11-04 10:26–10:32，使用 `/Applications/CC Switch.app` 4.0.25 和 Chrome，从本项目账户页实际点击导入链接。按 `blackbox-testing` 工作流执行，测试记录保留在本机 `.state/desktop-test-plan.md`。
+
+先退出日常实例，再以 `CC_SWITCH_TEST_HOME` 指向独立 `.state/desktop-home` 启动同一安装包。账户页使用临时本机模拟 DimAgent 服务与模拟账号，不读取已有 DimAgent / Magpie 凭据。
+
+- Codex 导入确认框正确显示完整模型 ID、本机前缀地址、OpenAI Chat Completions 和自动切换关闭；保存后出现成功提示。供应商卡片显示 `Needs routing`，编辑页保留 `model_reasoning_effort = "low"`。
+- 点击实际 `Fetch Models` 得到两个 OpenAI-compatible 模型，包括未声明 endpoint 的模型；选择完整模型 ID 后能够应用到编辑草稿，随后取消草稿。
+- OpenCode 确认框可以开启「导入后添加到配置」；导入后卡片显示 `Added · 1`。只读检查隔离客户端文件，确认 SDK 为 `@ai-sdk/openai-compatible`，地址和 `vendor/full-model-id` 完整保留。
+- Chrome 的外部应用确认需要用户式确认。本次不设置永久允许；首次重复唤起未立即显示桌面窗口，检查 Chrome 原生提示并确认后继续，没有把等待确认当成导入失败。
+- 未完成的项目：未进行真实账号授权、真实模型生成、额度重置，以及 Claude Code 安装版导入和取消导入流程。对应模拟与源码级证据仍见上文，不把它们计作安装版实测。
+
+测试结束后退出隔离实例，恢复正常 CC Switch 并回到原来的 Claude Code `default` 供应商。原用户数据库的 providers/settings 行内容以及 Claude Code、Codex、OpenCode 客户端配置与测试前只读基线一致。模拟接入进程与浏览器测试页均已关闭。
+
+截图仅包含隔离数据：
+
+- [Codex 导入卡片](verification/desktop-codex-import.png)
+- [安装版原生模型拉取](verification/desktop-fetch-models.png)
+- [OpenCode 已添加](verification/desktop-opencode-added.png)
